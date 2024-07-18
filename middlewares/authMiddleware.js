@@ -20,7 +20,7 @@ function authMiddleware(req, res, next) {
 
       next();
     } else {
-      res.status(403).send({ message: "invalid auth strategy" });
+      return res.status(403).send({ message: "invalid auth strategy" });
     }
   } catch (err) {
     res.status(404).send({

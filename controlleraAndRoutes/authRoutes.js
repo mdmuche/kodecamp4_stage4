@@ -64,11 +64,15 @@ authRouter.post("/login", async (req, res) => {
 
     const token = jwt.sign(
       {
-        userID: user._id,
+        userId: user._id,
         email: user.email,
       },
       process.env.SECRET
     );
+
+    await userCollection.findByIdAndUpdate(user._id, {
+      authToken: token,
+    });
 
     res.send({
       isSuccessful: true,
@@ -116,7 +120,12 @@ authRouter.post("/forgot-password", async (req, res) => {
       token,
     });
   } catch (err) {
-    res.status(500).send("server error", err.message);
+    console.error("server error", err.message);
+    return res.status(500).send({
+      isSuccessful: false,
+      message: "server error",
+      error: err.message,
+    });
   }
 });
 
@@ -127,7 +136,7 @@ authRouter.post("/reset-password", async (req, res) => {
     const resetToken = await tokenCollection.findOne({ token });
     if (!resetToken) {
       res.status(404).send({
-        isSuccessful: true,
+        isSuccessful: false,
         message: "invalid or expired token",
       });
       return;
@@ -144,9 +153,15 @@ authRouter.post("/reset-password", async (req, res) => {
 
     const hashedPassword = bcrypt.hashSync(newPassword, saltRounds);
 
+    const newAuthToken = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.SECRET
+    );
+
     // updating users password
     await userCollection.findByIdAndUpdate(resetToken.userId, {
       password: hashedPassword,
+      authToken: newAuthToken,
     });
 
     // delete the token after successful password reset;
